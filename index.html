@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SignalDesk — Weekly Health Check</title>
+<title>SignalDesk: Weekly Health Check</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -172,8 +172,8 @@
   <header class="mast">
     <h1>SignalDesk <span>/ weekly health check</span></h1>
     <div class="meta">
-      <span id="m-range">—</span>
-      <span id="m-rows">—</span>
+      <span id="m-range">Loading...</span>
+      <span id="m-rows">Loading...</span>
       <span class="loader">
         <input type="file" id="file" accept=".csv,text/csv">
         <label for="file">Load a different export</label>
@@ -284,7 +284,7 @@ function parse(text){
     // Team names arrive with inconsistent casing; fold before grouping
     // or "product" and "Product" become two different teams.
     if(r.team && r.team !== titleCase(r.team)){
-      r._fixes.push(`Team read as "${r.team}" — folded to "${titleCase(r.team)}"`);
+      r._fixes.push(`Team read as "${r.team}"; grouped with "${titleCase(r.team)}"`);
       r.team = titleCase(r.team);
     }
 
@@ -292,7 +292,7 @@ function parse(text){
     NUMS.forEach(k=>{
       const v = r[k];
       if(v === "" || /^(n\/a|na|null|-)$/i.test(v)){
-        r._fixes.push(`${label(k)} not recorded ${v ? `("${v}")` : "(blank)"} — held out of that average`);
+        r._fixes.push(`${label(k)} not recorded ${v ? `("${v}")` : "(blank)"}; excluded from that average`);
         r[k] = null;
       } else {
         const n = Number(v);
@@ -327,7 +327,7 @@ function audit(rows){
 
   // A day missing rows is a day you cannot compare to a full one.
   // Counted on the export as delivered: a day is not "partial" just because
-  // the strikes above removed a row from it — that is a coverage note, not a
+  // the strikes above removed a row from it. That is a coverage note, not a
   // short export, and the two want different handling.
   const perDay = {};
   rows.forEach(r=> perDay[r.date] = (perDay[r.date]||0)+1);
@@ -343,9 +343,9 @@ function audit(rows){
 
   rows.forEach(r=>{
     r._care = [];
-    if(partial.includes(r.date)) r._care.push(`${r.date} has ${perDay[r.date]} of ${full} expected rows — day totals are not comparable`);
-    if(/new prompt version/i.test(r.notes)) r._care.push("Prompt version changed here — periods either side are different products");
-    if(/policy changed/i.test(r.notes)) r._care.push("Review policy changed mid-day — this row mixes two regimes");
+    if(partial.includes(r.date)) r._care.push(`${r.date} has ${perDay[r.date]} of ${full} expected rows, so its daily totals are not comparable`);
+    if(/new prompt version/i.test(r.notes)) r._care.push("Prompt version changed here, so the periods before and after represent different products");
+    if(/policy changed/i.test(r.notes)) r._care.push("Review policy changed mid-day, so this row mixes two regimes");
     // Thin rows are counted and noted under the tables rather than listed here.
     // Twelve near-identical "small sample" lines would bury the four entries
     // in this ledger that actually need a decision.
@@ -359,8 +359,8 @@ function audit(rows){
 
 const sum = (rs,k) => rs.reduce((a,r)=> a + (r[k] ?? 0), 0);
 const pct = (n,d) => d ? (100*n/d) : null;
-const fmtP = v => v===null ? "—" : v.toFixed(1) + "%";
-const fmtN = (v,d=1) => v===null ? "—" : v.toFixed(d);
+const fmtP = v => v===null ? "N/A" : v.toFixed(1) + "%";
+const fmtN = (v,d=1) => v===null ? "N/A" : v.toFixed(d);
 
 // Minutes saved is a per-run average, so it has to be weighted by runs.
 // A flat mean of the rows quietly gives a 5-run row the same say as a 75-run row.
@@ -432,7 +432,7 @@ function render(text){
     [partial.length, "partial days"]
   ].map(([n,k])=> `<div><div class="n">${n}</div><div class="k">${k}</div></div>`).join("");
 
-  /* the ledger — every judgement call, on the page */
+  /* the ledger puts every judgement call on the page */
   const entries = [];
   cut.forEach(r=> entries.push({r, cls:"out", tag:"cut", tagTxt:"struck", why:r._cut}));
   fixed.forEach(r=> entries.push({r, cls:"", tag:"fix", tagTxt:"repaired", why:r._fixes.join(" · ")}));
@@ -497,7 +497,7 @@ function render(text){
                              sum(kept.filter(r=> per(r.date)),"completed"));
   const mPre = manShare(pre), mPost = manShare(post);
 
-  /* the read — written from the numbers, not typed in by hand */
+  /* the read is generated from the numbers rather than typed by hand */
   const wfStats = [...new Set(solid.map(r=>r.workflow))].map(w=>{
     const rs = solid.filter(r=>r.workflow===w);
     return {w, all:block(rs), auto:block(rs.filter(r=>r.source!=="manual")), man:block(rs.filter(r=>r.source==="manual"))};
@@ -515,8 +515,8 @@ function render(text){
     hand-started runs are included.</p>
     <p>The prompt change shipped on Aug 4 looks like a <span class="up fig">${sign(rawD)}</span> lift in the export, is
     <span class="flat fig">${sign(clD)}</span> once one demo account is removed, and turns <span class="up fig">${sign(adjD)}</span> again if you
-    account for the harder traffic mix that arrived with it. Three defensible readings of one week — which is the answer:
-    not proven either way, and worth one specific follow-up rather than a rollout.</p>
+    account for the harder traffic mix that arrived with it. These are three defensible readings of the same week, so the result
+    is not proven either way. It calls for one specific follow-up rather than a rollout.</p>
     <p>One thing needs a person today: ${anomalyLine(kept)}</p>`;
 
   /* per-workflow tables, split by how the run was started */
@@ -529,7 +529,7 @@ function render(text){
     const team = [...new Set(rs.map(r=>r.team))].join(", ");
     const auto = rs.filter(r=>r.source!=="manual");
     const man  = rs.filter(r=>r.source==="manual");
-    const srcs = [...new Set(auto.map(r=>r.source))].join(", ") || "—";
+    const srcs = [...new Set(auto.map(r=>r.source))].join(", ") || "N/A";
     const row = (name,b)=> b.sessions ? `<tr>
         <td class="lab">${name}</td>
         <td>${b.sessions}</td>
@@ -557,19 +557,19 @@ function render(text){
   }).join("");
 
   document.getElementById("wf-note").innerHTML =
-    `<b>Accepted</b> is a share of <code>completed</code>, not of <code>sessions</code> — a run that never finished was never offered to anyone to accept. ` +
-    `Hand-started runs are kept on their own line because they are accepted less often than every other entry point in all three workflows — by 11, 13 and 6 points. ` +
+    `<b>Accepted</b> is a share of <code>completed</code>, not of <code>sessions</code>. A run that never finished was never offered to anyone to accept. ` +
+    `Hand-started runs are kept on their own line because they are accepted less often than every other entry point in all three workflows, trailing by 11, 13, and 6 points. ` +
     `Blend them in and the headline number mostly tracks a workflow's entry mix rather than the workflow. ` +
     `<b>Confidence</b> is greyed out on purpose: it is the model scoring itself and it moves independently of what users actually did.` +
     (gaps.length ? `<br><br><b>Coverage gap.</b> ${gaps.join(", ")} arrived whole but lost a series to the strikes above, so Lead summary is running on one fewer day of automated traffic than the table implies.` : "") +
-    `<br><br><b>Thin rows.</b> ${kept.filter(r=>r._thin).length} of ${kept.length} counted rows carry under 15 runs, nearly all of them hand-started. They are included — dropping them would delete most of the manual line entirely — but a single outcome moves those rates by several points.`;
+    `<br><br><b>Thin rows.</b> ${kept.filter(r=>r._thin).length} of ${kept.length} counted rows contain fewer than 15 runs, and nearly all of them are hand-started. They are included because dropping them would remove most of the manual line, but a single outcome can move those rates by several points.`;
 
   /* prompt change: the whole comparison hangs on two rows */
   document.getElementById("prompt").innerHTML = `
     <div class="panel bad">
       <h4>As exported</h4>
       <div class="delta">${fmtP(rawPre)} → ${fmtP(rawPost)} <span class="up">${sign(rawD)}</span></div>
-      <p>Reads as a clear win. It is not one — the whole gain is the demo account, which landed on Aug 5 and was exported twice.</p>
+      <p>This looks like a clear win, but it is not. The entire gain comes from the demo account that landed on Aug 5 and was exported twice.</p>
     </div>
     <div class="panel">
       <h4>After the strikes above</h4>
@@ -579,7 +579,7 @@ function render(text){
 
   document.getElementById("prompt-note").innerHTML =
     `Aug 7 is left out of all three readings: it is a partial export and it contains the policy change below, so it belongs to neither period. ` +
-    `Aug 4–6 is treated as post-change because the note says the version <i>started</i> that day and nothing says it stopped — worth confirming with whoever shipped it. ` +
+    `Aug 4–6 is treated as post-change because the note says the version <i>started</i> that day and nothing says it stopped. Confirm that assumption with whoever shipped it. ` +
     `The fixed-mix row reweights both periods to their pooled group sizes, so it answers "what if the same traffic had arrived before and after" rather than "what actually happened".`;
 
 
@@ -620,7 +620,7 @@ function render(text){
           <tr class="gap"><td class="lab">Aug 7</td><td>${an.sessions}</td><td>${fmtP(pct(an.completed,an.sessions))}</td><td>${fmtP(aRate)}</td><td>${fmtP(aFlag)}</td><td>${fmtN(an.avg_minutes_saved)}</td><td>${fmtN(an.user_rating,2)}</td><td class="flat">${fmtN(an.median_confidence,2)}</td></tr>
         </tbody>
       </table></div>
-      <div class="note">Acceptance roughly halved and user rating fell to ${fmtN(an.user_rating,2)} while the model's own confidence rose to ${fmtN(an.median_confidence,2)} — its highest reading all week. Whatever the review policy change did, the model has no idea it happened. This single row is the reason confidence is not treated as a quality metric anywhere on this page.</div>`;
+      <div class="note">Acceptance roughly halved and user rating fell to ${fmtN(an.user_rating,2)} while the model's own confidence rose to ${fmtN(an.median_confidence,2)}, its highest reading all week. Whatever the review policy change did, the model has no idea it happened. This single row is the reason confidence is not treated as a quality metric anywhere on this page.</div>`;
   }
 
   /* next steps */
@@ -630,7 +630,7 @@ function render(text){
     ["Get the Aug 7 policy change written down",
      "Time of day, what changed, and who it applied to. Without it, Reply draft's worst day of the week is uninterpretable and next week's comparison starts from a broken baseline."],
     ["Confirm the prompt is still live, then re-run this split",
-     "The change is noted once and never again — if it rolled back on Aug 5 the whole comparison is measuring nothing. If it is live, next week's export tests the hypothesis directly: hand-started acceptance should stay up and automated should stay flat. That is a one-line check, not a study."],
+     "The change is noted once and never mentioned again. If it rolled back on Aug 5, the comparison tells us nothing. If it is still live, next week's export can test the hypothesis directly: hand-started acceptance should stay up while automated acceptance stays flat. That is a one-line check, not a study."],
     ["Leave Feedback clustering alone for another week",
      `It runs at about a third the volume of the others and is the only workflow where hand-started runs come close to automated ones. On ${sum(solid.filter(r=>r.workflow===worst.w),"completed")} completions that is as likely to be sample size as signal, and acting on it now risks changing something that was never broken.`]
   ].map(([h,p])=> `<li><b>${h}</b><span>${p}</span></li>`).join("");
@@ -638,7 +638,7 @@ function render(text){
   document.getElementById("foot").innerHTML =
     `Built for the SignalDesk product team · reads <code>product_usage_events.csv</code> as exported.<br>` +
     `Rates use completions as the denominator. Minutes saved, rating and confidence are weighted by runs. ` +
-    `Rows are struck for exact duplication or demo traffic only — nothing is dropped for looking wrong.<br>` +
+    `Rows are struck only for exact duplication or demo traffic. Nothing is dropped simply because it looks wrong.<br>` +
     `<code>sessions</code> are runs, not people. <code>completed</code> means the workflow finished, not that the output was good.`;
 }
 
