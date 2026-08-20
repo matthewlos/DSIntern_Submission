@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SignalDesk — Weekly Health Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#E4E9ED;
+    --card:#FFFFFF;
+    --muted:#62727F;
+    --rule:#C6D0D7;
+    --trust:#0B6E5F;
+    --alert:#A0342C;
+    --watch:#8A6A00;
+    --struck:#8C99A4;
+    --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+    --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    --mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--body);font-size:15px;line-height:1.55;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:32px 20px 96px}
+
+  /* ---- masthead ---- */
+  .mast{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:28px}
+  .mast h1{
+    font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,40px);
+    letter-spacing:-.02em;line-height:1.05;margin:0 0 8px;
+  }
+  .mast h1 span{color:var(--muted);font-weight:600}
+  .meta{
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;
+  }
+  .loader{margin-left:auto}
+  .loader label{
+    cursor:pointer;border:1px solid var(--rule);background:var(--card);
+    padding:4px 10px;border-radius:2px;display:inline-block;color:var(--ink);
+  }
+  .loader label:hover{border-color:var(--ink)}
+  .loader input{position:absolute;opacity:0;width:1px;height:1px}
+  .loader input:focus-visible + label{outline:2px solid var(--ink);outline-offset:2px}
+
+  /* ---- section scaffolding ---- */
+  section{margin-bottom:34px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);
+    display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:20px}
+
+  /* ---- the read ---- */
+  .read{font-size:clamp(17px,2.4vw,20px);line-height:1.5;border-left:4px solid var(--ink)}
+  .read p{margin:0 0 12px}
+  .read p:last-child{margin-bottom:0}
+  .read b{font-weight:600}
+  .fig{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+  .up{color:var(--trust)} .down{color:var(--alert)} .flat{color:var(--muted)}
+
+  /* ---- provenance strip ---- */
+  .prov{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule);background:var(--card);border-radius:3px;overflow:hidden}
+  .prov div{flex:1 1 120px;padding:12px 16px;border-right:1px solid var(--rule)}
+  .prov div:last-child{border-right:0}
+  .prov .n{font-family:var(--mono);font-size:24px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+  .prov .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+
+  /* ---- ledger (signature) ---- */
+  .ledger{margin-top:14px;border:1px solid var(--rule);background:var(--card);border-radius:3px}
+  .lrow{display:grid;grid-template-columns:1fr 300px;gap:0;border-bottom:1px solid var(--rule)}
+  .lrow:last-child{border-bottom:0}
+  .lrow .data{
+    font-family:var(--mono);font-size:12px;padding:10px 14px;
+    overflow-x:auto;white-space:nowrap;color:var(--ink);
+  }
+  .lrow.out .data{color:var(--struck);text-decoration:line-through;text-decoration-thickness:1px}
+  .lrow .why{
+    padding:10px 14px;border-left:1px solid var(--rule);font-size:13px;
+    display:flex;gap:8px;align-items:flex-start;
+  }
+  .tag{
+    font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap;flex:none;margin-top:2px;
+  }
+  .tag.cut{background:#F2E3E2;color:var(--alert)}
+  .tag.fix{background:#DCEAE7;color:var(--trust)}
+  .tag.care{background:#F3EBD4;color:var(--watch)}
+  .ledger-head{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--rule);background:#F5F7F9;
+  }
+
+  /* ---- workflow cards ---- */
+  .wf{margin-bottom:12px}
+  .wf h3{font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+  .wf .who{font-size:13px;color:var(--muted);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+  th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--rule)}
+  th{
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    font-weight:500;border-bottom:1px solid var(--ink);
+  }
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:last-child td{border-bottom:0}
+  td.lab{font-family:var(--body);font-size:13px}
+  tr.gap td{color:var(--alert)}
+  .note{font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.5}
+  .note code{font-family:var(--mono);font-size:11.5px;background:#EDF1F3;padding:1px 4px;border-radius:2px}
+
+  /* ---- verdict blocks ---- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .panel{border:1px solid var(--rule);background:var(--card);border-radius:3px;padding:16px}
+  .panel.bad{border-color:var(--alert);border-width:1px}
+  .panel h4{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    margin:0 0 10px;color:var(--muted);font-weight:600;
+  }
+  .delta{font-family:var(--mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .panel p{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+  .panel.mix{margin-top:12px}
+  .panel.mix table{margin-bottom:2px}
+  .panel.mix tbody tr:last-child td{border-top:1px solid var(--ink);border-bottom:0;padding-top:9px}
+  .panel.mix p .fig{color:var(--ink)}
+
+  ol.next{counter-reset:n;list-style:none;padding:0;margin:0}
+  ol.next li{
+    counter-increment:n;position:relative;padding:14px 0 14px 44px;border-bottom:1px solid var(--rule);
+  }
+  ol.next li:last-child{border-bottom:0;padding-bottom:0}
+  ol.next li::before{
+    content:counter(n,decimal-leading-zero);position:absolute;left:0;top:14px;
+    font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);
+  }
+  ol.next b{display:block;font-weight:600;margin-bottom:2px}
+  ol.next span{font-size:13.5px;color:var(--muted)}
+
+  footer{
+    margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.7;
+  }
+
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tscroll:focus-visible{outline:2px solid var(--ink)}
+  @media (max-width:680px){
+    .tscroll table{min-width:520px}
+    .panel.mix .tscroll table{min-width:440px}
+    .lrow{grid-template-columns:1fr}
+    .lrow .why{border-left:0;border-top:1px dotted var(--rule)}
+    .split{grid-template-columns:1fr}
+    .loader{margin-left:0;width:100%}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    section{animation:rise .4s ease both}
+    @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  }
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <h1>SignalDesk <span>/ weekly health check</span></h1>
+    <div class="meta">
+      <span id="m-range">—</span>
+      <span id="m-rows">—</span>
+      <span class="loader">
+        <input type="file" id="file" accept=".csv,text/csv">
+        <label for="file">Load a different export</label>
+      </span>
+    </div>
+  </header>
+
+  <section>
+    <div class="eyebrow">The read</div>
+    <div class="card read" id="read"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What went into the numbers</div>
+    <div class="prov" id="prov"></div>
+    <div class="ledger" id="ledger"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">By workflow · <span id="wf-span">complete days only</span></div>
+    <div id="workflows"></div>
+    <div class="note" id="wf-note"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Did the Aug 4 prompt change help?</div>
+    <div class="split" id="prompt"></div>
+    <div class="panel mix" id="mix"></div>
+    <div class="note" id="prompt-note"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Look at this before anything else</div>
+    <div class="card" id="anomaly"></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">What to check next</div>
+    <div class="card"><ol class="next" id="next"></ol></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   SignalDesk weekly health check
+   One job: show which workflow numbers are safe to act on this week,
+   and make every excluded row visible instead of silently dropping it.
+-------------------------------------------------------------------*/
+
+const RAW = `date,team,workflow,source,sessions,completed,accepted_output,flagged_for_review,avg_minutes_saved,median_confidence,user_rating,notes
+2026-08-01,Sales,Lead summary,email,42,35,29,3,8.5,0.74,4.1,normal day
+2026-08-01,Sales,Lead summary,manual,18,12,8,2,6.0,0.61,3.8,normal day
+2026-08-01,Support,Reply draft,queue,55,48,39,6,4.5,0.82,4.0,normal day
+2026-08-01,Support,Reply draft,manual,11,8,5,1,3.0,0.68,,missing rating
+2026-08-01,Product,Feedback clustering,csv upload,12,9,6,2,14.0,0.59,3.6,small sample
+2026-08-01,Product,Feedback clustering,manual,5,4,3,1,11.0,0.55,3.5,small sample
+2026-08-02,Sales,Lead summary,email,46,38,31,3,8.2,0.76,4.2,normal day
+2026-08-02,Sales,Lead summary,manual,20,14,9,2,6.4,0.63,3.9,normal day
+2026-08-02,Support,Reply draft,queue,61,52,41,7,4.2,0.83,4.1,normal day
+2026-08-02,Support,Reply draft,manual,12,9,6,1,3.2,0.69,3.7,normal day
+2026-08-02,Product,Feedback clustering,csv upload,16,11,8,2,13.5,0.60,3.7,normal day
+2026-08-02,product,Feedback clustering,manual,6,4,2,1,10.5,0.52,3.4,team casing differs
+2026-08-03,Sales,Lead summary,email,50,40,32,4,8.4,0.77,4.2,normal day
+2026-08-03,Sales,Lead summary,manual,22,15,10,2,6.1,0.64,3.8,normal day
+2026-08-03,Support,Reply draft,queue,64,54,42,8,4.0,0.84,4.0,normal day
+2026-08-03,Support,Reply draft,manual,13,10,6,1,3.4,0.70,3.8,normal day
+2026-08-03,Product,Feedback clustering,csv upload,18,12,8,2,13.0,0.61,3.8,normal day
+2026-08-03,Product,Feedback clustering,manual,7,5,3,1,10.8,0.53,3.5,normal day
+2026-08-04,Sales,Lead summary,email,53,43,35,3,8.7,0.79,4.3,new prompt version started
+2026-08-04,Sales,Lead summary,manual,25,18,13,2,6.7,0.66,4.0,new prompt version started
+2026-08-04,Support,Reply draft,queue,69,57,45,9,4.1,0.86,4.2,new prompt version started
+2026-08-04,Support,Reply draft,manual,14,10,7,1,3.5,0.72,3.9,new prompt version started
+2026-08-04,Product,Feedback clustering,csv upload,20,14,10,2,13.7,0.63,3.9,new prompt version started
+2026-08-04,Product,Feedback clustering,manual,8,6,4,1,11.2,0.55,3.6,new prompt version started
+2026-08-05,Sales,Lead summary,email,140,126,119,2,12.0,0.95,4.9,traffic spike from demo account
+2026-08-05,Sales,Lead summary,email,140,126,119,2,12.0,0.95,4.9,duplicate export row
+2026-08-05,Sales,Lead summary,manual,28,20,15,2,6.5,0.67,4.0,normal day
+2026-08-05,Support,Reply draft,queue,72,60,47,9,4.2,0.87,4.2,normal day
+2026-08-05,Support,Reply draft,manual,16,12,8,2,3.4,0.73,3.8,normal day
+2026-08-05,Product,Feedback clustering,csv upload,24,15,10,3,13.9,0.64,3.8,normal day
+2026-08-05,Product,Feedback clustering,manual,9,7,4,1,11.0,n/a,3.5,confidence missing as text
+2026-08-06,Sales,Lead summary,email,58,47,38,4,8.8,0.80,4.3,normal day
+2026-08-06,Sales,Lead summary,manual,27,19,14,2,6.8,0.67,4.0,normal day
+2026-08-06,Support,Reply draft,queue,75,61,48,10,4.0,0.88,4.1,normal day
+2026-08-06,Support,Reply draft,manual,18,13,9,2,3.5,0.74,3.9,normal day
+2026-08-06,Product,Feedback clustering,csv upload,28,17,11,4,14.1,0.66,3.8,normal day
+2026-08-06,Product,Feedback clustering,manual,11,8,5,1,11.3,0.57,3.6,normal day
+2026-08-07,Sales,Lead summary,email,61,49,39,5,8.6,0.81,4.2,normal day
+2026-08-07,Support,Reply draft,queue,30,17,8,12,1.5,0.91,2.1,review policy changed mid-day
+2026-08-07,Product,Feedback clustering,csv upload,31,18,12,4,14.4,0.67,3.9,normal day
+2026-08-07,Product,Feedback clustering,manual,12,8,5,1,11.1,0.58,3.6,normal day`;
+
+/* ---------- parse + normalise ---------- */
+
+const NUMS = ["sessions","completed","accepted_output","flagged_for_review",
+              "avg_minutes_saved","median_confidence","user_rating"];
+
+function parse(text){
+  const lines = text.trim().split(/\r?\n/);
+  const head = lines[0].split(",").map(s=>s.trim());
+  return lines.slice(1).map((line,i)=>{
+    const cells = line.split(",");
+    const r = {_i:i+2, _fixes:[]};
+    head.forEach((h,j)=> r[h] = (cells[j] ?? "").trim());
+
+    // Team names arrive with inconsistent casing; fold before grouping
+    // or "product" and "Product" become two different teams.
+    if(r.team && r.team !== titleCase(r.team)){
+      r._fixes.push(`Team read as "${r.team}" — folded to "${titleCase(r.team)}"`);
+      r.team = titleCase(r.team);
+    }
+
+    // Blanks and the literal string "n/a" both mean "not recorded".
+    NUMS.forEach(k=>{
+      const v = r[k];
+      if(v === "" || /^(n\/a|na|null|-)$/i.test(v)){
+        r._fixes.push(`${label(k)} not recorded ${v ? `("${v}")` : "(blank)"} — held out of that average`);
+        r[k] = null;
+      } else {
+        const n = Number(v);
+        r[k] = Number.isFinite(n) ? n : null;
+      }
+    });
+    return r;
+  });
+}
+
+const titleCase = s => s.replace(/\w\S*/g, t => t[0].toUpperCase() + t.slice(1).toLowerCase());
+const label = k => ({sessions:"Runs",completed:"Completions",accepted_output:"Accepted",
+  flagged_for_review:"Flags",avg_minutes_saved:"Minutes saved",
+  median_confidence:"Model confidence",user_rating:"User rating"}[k] || k);
+
+/* ---------- exclusion rules ---------- */
+
+function audit(rows){
+  const seen = new Map();
+  rows.forEach(r=>{
+    const key = [r.date,r.team,r.workflow,r.source,...NUMS.map(k=>r[k])].join("|");
+    if(seen.has(key)){
+      r._cut = `Byte-identical to row ${seen.get(key)}. Counting it twice would inflate a real day.`;
+    } else {
+      seen.set(key, r._i);
+    }
+    // Demo traffic is not usage. Both copies of the Aug 5 spike go.
+    if(!r._cut && /demo account/i.test(r.notes)){
+      r._cut = "Demo-account traffic. Not a real team using the workflow.";
+    }
+  });
+
+  // A day missing rows is a day you cannot compare to a full one.
+  // Counted on the export as delivered: a day is not "partial" just because
+  // the strikes above removed a row from it — that is a coverage note, not a
+  // short export, and the two want different handling.
+  const perDay = {};
+  rows.forEach(r=> perDay[r.date] = (perDay[r.date]||0)+1);
+  const tally = {};
+  Object.values(perDay).forEach(n=> tally[n] = (tally[n]||0)+1);
+  const full = Number(Object.keys(tally).sort((a,b)=> tally[b]-tally[a] || b-a)[0]);
+  const partial = Object.keys(perDay).filter(d=> perDay[d] < full);
+
+  // Days that arrived whole but lost a series to a strike.
+  const thinned = {};
+  rows.filter(r=>!r._cut).forEach(r=> thinned[r.date] = (thinned[r.date]||0)+1);
+  const gaps = Object.keys(perDay).filter(d=> !partial.includes(d) && thinned[d] < full);
+
+  rows.forEach(r=>{
+    r._care = [];
+    if(partial.includes(r.date)) r._care.push(`${r.date} has ${perDay[r.date]} of ${full} expected rows — day totals are not comparable`);
+    if(/new prompt version/i.test(r.notes)) r._care.push("Prompt version changed here — periods either side are different products");
+    if(/policy changed/i.test(r.notes)) r._care.push("Review policy changed mid-day — this row mixes two regimes");
+    // Thin rows are counted and noted under the tables rather than listed here.
+    // Twelve near-identical "small sample" lines would bury the four entries
+    // in this ledger that actually need a decision.
+    r._thin = r.sessions !== null && r.sessions < 15;
+  });
+
+  return {rows, partial, full, perDay, gaps};
+}
+
+/* ---------- aggregation ---------- */
+
+const sum = (rs,k) => rs.reduce((a,r)=> a + (r[k] ?? 0), 0);
+const pct = (n,d) => d ? (100*n/d) : null;
+const fmtP = v => v===null ? "—" : v.toFixed(1) + "%";
+const fmtN = (v,d=1) => v===null ? "—" : v.toFixed(d);
+
+// Minutes saved is a per-run average, so it has to be weighted by runs.
+// A flat mean of the rows quietly gives a 5-run row the same say as a 75-run row.
+function weightedMinutes(rs){
+  const ok = rs.filter(r=> r.avg_minutes_saved !== null && r.sessions);
+  if(!ok.length) return null;
+  return ok.reduce((a,r)=> a + r.avg_minutes_saved*r.sessions, 0) / ok.reduce((a,r)=> a + r.sessions, 0);
+}
+function weightedConf(rs){
+  const ok = rs.filter(r=> r.median_confidence !== null && r.sessions);
+  if(!ok.length) return null;
+  return ok.reduce((a,r)=> a + r.median_confidence*r.sessions, 0) / ok.reduce((a,r)=> a + r.sessions, 0);
+}
+function weightedRating(rs){
+  const ok = rs.filter(r=> r.user_rating !== null && r.sessions);
+  if(!ok.length) return null;
+  return ok.reduce((a,r)=> a + r.user_rating*r.sessions, 0) / ok.reduce((a,r)=> a + r.sessions, 0);
+}
+
+
+// One sentence naming the worst comparable break in the week.
+function anomalyLine(kept){
+  const an = kept.find(r=> /policy changed/i.test(r.notes));
+  if(!an) return "nothing in this export needs same-day attention.";
+  const prior = kept.filter(r=> r.workflow===an.workflow && r.source===an.source && r.date < an.date);
+  const was = pct(sum(prior,"accepted_output"), sum(prior,"completed"));
+  const now = pct(an.accepted_output, an.completed);
+  return `${an.workflow} acceptance fell from ${fmtP(was)} to ${fmtP(now)} on ${an.date} while the model's own confidence hit its weekly high. ` +
+         `A review policy changed mid-day and nobody wrote down what it was.`;
+}
+
+function block(rs){
+  const s = sum(rs,"sessions"), c = sum(rs,"completed");
+  return {
+    rows: rs.length,
+    sessions: s,
+    completion: pct(c, s),
+    acceptance: pct(sum(rs,"accepted_output"), c),   // of completions, not of runs
+    flagRate:   pct(sum(rs,"flagged_for_review"), c),
+    minutes:    weightedMinutes(rs),
+    conf:       weightedConf(rs),
+    rating:     weightedRating(rs)
+  };
+}
+
+/* ---------- render ---------- */
+
+function render(text){
+  const parsed = parse(text);
+  const {rows, partial, full, perDay, gaps} = audit(parsed);
+
+  const kept  = rows.filter(r=>!r._cut);
+  const cut   = rows.filter(r=> r._cut);
+  const fixed = rows.filter(r=> r._fixes.length && !r._cut);
+  const flagged = kept.filter(r=> r._care.length);
+  const dates = [...new Set(rows.map(r=>r.date))].sort();
+  const solid = kept.filter(r=> !partial.includes(r.date));   // complete days only
+
+  /* masthead */
+  document.getElementById("m-range").textContent = `${dates[0]} → ${dates[dates.length-1]}`;
+  document.getElementById("m-rows").textContent  = `${rows.length} rows read · ${kept.length} used`;
+
+  /* provenance strip */
+  document.getElementById("prov").innerHTML = [
+    [kept.length + "/" + rows.length, "rows counted"],
+    [cut.length,     "struck out"],
+    [fixed.length,   "values repaired"],
+    [flagged.length, "read with care"],
+    [partial.length, "partial days"]
+  ].map(([n,k])=> `<div><div class="n">${n}</div><div class="k">${k}</div></div>`).join("");
+
+  /* the ledger — every judgement call, on the page */
+  const entries = [];
+  cut.forEach(r=> entries.push({r, cls:"out", tag:"cut", tagTxt:"struck", why:r._cut}));
+  fixed.forEach(r=> entries.push({r, cls:"", tag:"fix", tagTxt:"repaired", why:r._fixes.join(" · ")}));
+  flagged.filter(r=>!r._fixes.length).forEach(r=> entries.push({r, cls:"", tag:"care", tagTxt:"caveat", why:r._care.join(" · ")}));
+
+  // One caveat can apply to a whole day's worth of rows. Printing it six times
+  // buries the entries that need an actual decision, so identical reasons
+  // collapse to a single line that names the lines it covers.
+  const grouped = [];
+  entries.forEach(e=>{
+    const hit = grouped.find(g=> g.why===e.why && g.tag===e.tag);
+    if(hit) hit.rows.push(e.r); else grouped.push({...e, rows:[e.r]});
+  });
+
+  const describe = rs => rs.length === 1
+    ? `line ${rs[0]._i} · ${rs[0].date} · ${rs[0].team} · ${rs[0].workflow} · ${rs[0].source} · ${rs[0].sessions} runs`
+    : `lines ${rs.map(r=>r._i).join(", ")} · ${[...new Set(rs.map(r=>r.date))].join(", ")} · ${rs.length} rows · ${sum(rs,"sessions")} runs`;
+
+  document.getElementById("ledger").innerHTML =
+    `<div class="ledger-head">Every row the health check changed, dropped, or wants you to squint at</div>` +
+    grouped.map(e=>`
+      <div class="lrow ${e.cls}">
+        <div class="data">${describe(e.rows)}</div>
+        <div class="why"><span class="tag ${e.tag}">${e.tagTxt}</span><span>${e.why}</span></div>
+      </div>`).join("");
+
+  /* Prompt change. Computed here because the verdict below quotes it.
+     Aug 7 is in neither period: partial export, and it carries the policy change. */
+  const pre  = d => d >= "2026-08-01" && d <= "2026-08-03";
+  const post = d => d >= "2026-08-04" && d <= "2026-08-06";
+  const acc = rs => pct(sum(rs,"accepted_output"), sum(rs,"completed"));
+  const rawPre  = acc(rows.filter(r=>pre(r.date)));
+  const rawPost = acc(rows.filter(r=>post(r.date)));
+  const clPre   = acc(kept.filter(r=>pre(r.date)));
+  const clPost  = acc(kept.filter(r=>post(r.date)));
+  // Deltas are taken from the rounded figures shown on screen, so a reader
+  // can subtract the two numbers in front of them and get the same answer.
+  const r1 = v => Math.round(v*10)/10;
+  const rawD = r1(rawPost) - r1(rawPre), clD = r1(clPost) - r1(clPre);
+  const sign = v => (v>0?"+":"") + v.toFixed(1) + "pp";
+
+  /* The crude pre/post number hides a shift in who was running these.
+     Same six cells, same acceptance definition, mix held fixed. */
+  const cellOf = r => `${r.workflow} · ${r.source === "manual" ? "by hand" : "automated"}`;
+  // Automated groups first, then hand-started: the argument of this table is
+  // that the two blocks moved in opposite directions, so they sit in blocks.
+  const cellNames = [...new Set(kept.map(cellOf))].sort((a,b)=>
+    (a.includes("by hand") - b.includes("by hand")) || a.localeCompare(b));
+  const cells = cellNames.map(c=>{
+    const a = kept.filter(r=> pre(r.date)  && cellOf(r)===c);
+    const b = kept.filter(r=> post(r.date) && cellOf(r)===c);
+    const na = sum(a,"completed"), nb = sum(b,"completed");
+    return {c, na, nb, pa: acc(a), pb: acc(b), w: na + nb};
+  }).filter(x=> x.na && x.nb);
+
+  const wTot   = cells.reduce((s,x)=> s + x.w, 0);
+  const adjPre = cells.reduce((s,x)=> s + x.pa*x.w, 0) / wTot;
+  const adjPost= cells.reduce((s,x)=> s + x.pb*x.w, 0) / wTot;
+  const adjD   = r1(adjPost) - r1(adjPre);
+
+  const manShare = per => pct(sum(kept.filter(r=> per(r.date) && r.source==="manual"),"completed"),
+                             sum(kept.filter(r=> per(r.date)),"completed"));
+  const mPre = manShare(pre), mPost = manShare(post);
+
+  /* the read — written from the numbers, not typed in by hand */
+  const wfStats = [...new Set(solid.map(r=>r.workflow))].map(w=>{
+    const rs = solid.filter(r=>r.workflow===w);
+    return {w, all:block(rs), auto:block(rs.filter(r=>r.source!=="manual")), man:block(rs.filter(r=>r.source==="manual"))};
+  });
+  const byAcc = [...wfStats].sort((a,b)=> b.all.acceptance - a.all.acceptance);
+  const biggest = [...wfStats].sort((a,b)=> b.all.sessions - a.all.sessions)[0];
+  const best = byAcc[0], worst = byAcc[byAcc.length-1];
+
+  document.getElementById("read").innerHTML = `
+    <p><b>${best.w}</b> is the one to keep. <span class="fig">${fmtP(best.all.acceptance)}</span> of finished runs accepted with no major
+    rework across all entry points, on <span class="fig">${best.all.sessions}</span> runs over ${[...new Set(solid.map(r=>r.date))].length} clean days.
+    <b>${biggest.w}</b> carries the most volume at <span class="fig">${biggest.all.sessions}</span> runs and holds a similar rate.
+    <b>${worst.w}</b> sits last at <span class="fig">${fmtP(worst.all.acceptance)}</span>, but on
+    <span class="fig">${worst.all.sessions}</span> runs that gap is not yet worth acting on. The order is the same whether or not
+    hand-started runs are included.</p>
+    <p>The prompt change shipped on Aug 4 looks like a <span class="up fig">${sign(rawD)}</span> lift in the export, is
+    <span class="flat fig">${sign(clD)}</span> once one demo account is removed, and turns <span class="up fig">${sign(adjD)}</span> again if you
+    account for the harder traffic mix that arrived with it. Three defensible readings of one week — which is the answer:
+    not proven either way, and worth one specific follow-up rather than a rollout.</p>
+    <p>One thing needs a person today: ${anomalyLine(kept)}</p>`;
+
+  /* per-workflow tables, split by how the run was started */
+  const wfNames = wfStats.map(s=>s.w);
+  const solidDays = [...new Set(solid.map(r=>r.date))].sort();
+  document.getElementById("wf-span").textContent =
+    `${solidDays[0]} to ${solidDays[solidDays.length-1]} · complete days only`;
+  document.getElementById("workflows").innerHTML = wfNames.map(w=>{
+    const rs = solid.filter(r=>r.workflow===w);
+    const team = [...new Set(rs.map(r=>r.team))].join(", ");
+    const auto = rs.filter(r=>r.source!=="manual");
+    const man  = rs.filter(r=>r.source==="manual");
+    const srcs = [...new Set(auto.map(r=>r.source))].join(", ") || "—";
+    const row = (name,b)=> b.sessions ? `<tr>
+        <td class="lab">${name}</td>
+        <td>${b.sessions}</td>
+        <td>${fmtP(b.completion)}</td>
+        <td>${fmtP(b.acceptance)}</td>
+        <td>${fmtP(b.flagRate)}</td>
+        <td>${fmtN(b.minutes)}</td>
+        <td>${fmtN(b.rating,2)}</td>
+        <td class="flat">${fmtN(b.conf,2)}</td>
+      </tr>` : "";
+    return `<div class="card wf">
+      <h3>${w}</h3>
+      <div class="who">${team} · started from ${srcs} or by hand</div>
+      <div class="tscroll"><table>
+        <thead><tr>
+          <th>Started from</th><th>Runs</th><th>Finished</th><th>Accepted</th>
+          <th>Flagged</th><th>Min saved</th><th>Rating</th><th>Confidence</th>
+        </tr></thead>
+        <tbody>
+          ${row(srcs, block(auto))}
+          ${row("By hand", block(man))}
+        </tbody>
+      </table></div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("wf-note").innerHTML =
+    `<b>Accepted</b> is a share of <code>completed</code>, not of <code>sessions</code> — a run that never finished was never offered to anyone to accept. ` +
+    `Hand-started runs are kept on their own line because they are accepted less often than every other entry point in all three workflows — by 11, 13 and 6 points. ` +
+    `Blend them in and the headline number mostly tracks a workflow's entry mix rather than the workflow. ` +
+    `<b>Confidence</b> is greyed out on purpose: it is the model scoring itself and it moves independently of what users actually did.` +
+    (gaps.length ? `<br><br><b>Coverage gap.</b> ${gaps.join(", ")} arrived whole but lost a series to the strikes above, so Lead summary is running on one fewer day of automated traffic than the table implies.` : "") +
+    `<br><br><b>Thin rows.</b> ${kept.filter(r=>r._thin).length} of ${kept.length} counted rows carry under 15 runs, nearly all of them hand-started. They are included — dropping them would delete most of the manual line entirely — but a single outcome moves those rates by several points.`;
+
+  /* prompt change: the whole comparison hangs on two rows */
+  document.getElementById("prompt").innerHTML = `
+    <div class="panel bad">
+      <h4>As exported</h4>
+      <div class="delta">${fmtP(rawPre)} → ${fmtP(rawPost)} <span class="up">${sign(rawD)}</span></div>
+      <p>Reads as a clear win. It is not one — the whole gain is the demo account, which landed on Aug 5 and was exported twice.</p>
+    </div>
+    <div class="panel">
+      <h4>After the strikes above</h4>
+      <div class="delta">${fmtP(clPre)} → ${fmtP(clPost)} <span class="flat">${sign(clD)}</span></div>
+      <p>Nothing moved. On ${sum(kept.filter(r=>post(r.date)),"completed")} completions this is well inside week-to-week noise, so the honest answer is "no effect we can see yet", not "no effect".</p>
+    </div>`;
+
+  document.getElementById("prompt-note").innerHTML =
+    `Aug 7 is left out of all three readings: it is a partial export and it contains the policy change below, so it belongs to neither period. ` +
+    `Aug 4–6 is treated as post-change because the note says the version <i>started</i> that day and nothing says it stopped — worth confirming with whoever shipped it. ` +
+    `The fixed-mix row reweights both periods to their pooled group sizes, so it answers "what if the same traffic had arrived before and after" rather than "what actually happened".`;
+
+
+  document.getElementById("mix").innerHTML = `
+    <h4>Same six groups, mix held fixed</h4>
+    <p style="margin:0 0 14px">Hand-started runs grew from <span class="fig">${fmtP(mPre)}</span> to
+    <span class="fig">${fmtP(mPost)}</span> of completions across the change, and they are accepted 11–13 points less often
+    than every other entry point. The post period is doing harder work, so the crude figures above are not comparing like with like.</p>
+    <div class="tscroll"><table>
+      <thead><tr><th>Group</th><th>Before</th><th>After</th><th>Change</th><th>Completions</th></tr></thead>
+      <tbody>${cells.map(x=>{
+        const d = r1(x.pb) - r1(x.pa);
+        const cls = Math.abs(d) < 2 ? "flat" : (d > 0 ? "up" : "down");
+        return `<tr><td class="lab">${x.c}</td><td>${fmtP(x.pa)}</td><td>${fmtP(x.pb)}</td>
+                <td class="${cls}">${sign(d)}</td><td class="flat">${x.na} → ${x.nb}</td></tr>`;
+      }).join("")}
+      <tr><td class="lab"><b>Mix held fixed</b></td><td>${fmtP(adjPre)}</td><td>${fmtP(adjPost)}</td>
+          <td class="${adjD>0?"up":"flat"}">${sign(adjD)}</td><td class="flat">${wTot}</td></tr>
+      </tbody>
+    </table></div>
+    <p>Read the pattern, not the individual numbers. Every automated group is flat or slightly down; every hand-started group is up.
+    The manual cells are small enough that any one of them is noise, but the sign is the same in all three and absent from all three
+    automated groups. That is a hypothesis worth testing, not a result: <b>the new prompt may help when the input arrives messy and
+    do nothing when it arrives structured.</b></p>`;
+
+  /* the anomaly worth a human */
+  const an = kept.find(r=> /policy changed/i.test(r.notes));
+  if(an){
+    const prior = kept.filter(r=> r.workflow===an.workflow && r.source===an.source && r.date < an.date);
+    const b = block(prior);
+    const aRate = pct(an.accepted_output, an.completed), aFlag = pct(an.flagged_for_review, an.completed);
+    document.getElementById("anomaly").innerHTML = `
+      <h3 style="font-family:var(--display);font-weight:600;font-size:19px;margin:0 0 10px">${an.workflow} broke on ${an.date}, and confidence went up</h3>
+      <div class="tscroll"><table>
+        <thead><tr><th></th><th>Runs</th><th>Finished</th><th>Accepted</th><th>Flagged</th><th>Min saved</th><th>Rating</th><th>Confidence</th></tr></thead>
+        <tbody>
+          <tr><td class="lab">Aug 1–6 average</td><td>${Math.round(b.sessions/prior.length)}</td><td>${fmtP(b.completion)}</td><td>${fmtP(b.acceptance)}</td><td>${fmtP(b.flagRate)}</td><td>${fmtN(b.minutes)}</td><td>${fmtN(b.rating,2)}</td><td class="flat">${fmtN(b.conf,2)}</td></tr>
+          <tr class="gap"><td class="lab">Aug 7</td><td>${an.sessions}</td><td>${fmtP(pct(an.completed,an.sessions))}</td><td>${fmtP(aRate)}</td><td>${fmtP(aFlag)}</td><td>${fmtN(an.avg_minutes_saved)}</td><td>${fmtN(an.user_rating,2)}</td><td class="flat">${fmtN(an.median_confidence,2)}</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">Acceptance roughly halved and user rating fell to ${fmtN(an.user_rating,2)} while the model's own confidence rose to ${fmtN(an.median_confidence,2)} — its highest reading all week. Whatever the review policy change did, the model has no idea it happened. This single row is the reason confidence is not treated as a quality metric anywhere on this page.</div>`;
+  }
+
+  /* next steps */
+  document.getElementById("next").innerHTML = [
+    ["Ask why Aug 5 exported twice",
+     "One demo account moved the headline acceptance rate by nearly seven points. Until demo and internal traffic are separable in the export, every weekly number is one bad row away from being wrong."],
+    ["Get the Aug 7 policy change written down",
+     "Time of day, what changed, and who it applied to. Without it, Reply draft's worst day of the week is uninterpretable and next week's comparison starts from a broken baseline."],
+    ["Confirm the prompt is still live, then re-run this split",
+     "The change is noted once and never again — if it rolled back on Aug 5 the whole comparison is measuring nothing. If it is live, next week's export tests the hypothesis directly: hand-started acceptance should stay up and automated should stay flat. That is a one-line check, not a study."],
+    ["Leave Feedback clustering alone for another week",
+     `It runs at about a third the volume of the others and is the only workflow where hand-started runs come close to automated ones. On ${sum(solid.filter(r=>r.workflow===worst.w),"completed")} completions that is as likely to be sample size as signal, and acting on it now risks changing something that was never broken.`]
+  ].map(([h,p])=> `<li><b>${h}</b><span>${p}</span></li>`).join("");
+
+  document.getElementById("foot").innerHTML =
+    `Built for the SignalDesk product team · reads <code>product_usage_events.csv</code> as exported.<br>` +
+    `Rates use completions as the denominator. Minutes saved, rating and confidence are weighted by runs. ` +
+    `Rows are struck for exact duplication or demo traffic only — nothing is dropped for looking wrong.<br>` +
+    `<code>sessions</code> are runs, not people. <code>completed</code> means the workflow finished, not that the output was good.`;
+}
+
+render(RAW);
+
+document.getElementById("file").addEventListener("change", e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try { render(fr.result); }
+    catch(err){ alert("That file did not parse as a SignalDesk export. Expected the same column headers as product_usage_events.csv."); }
+  };
+  fr.readAsText(f);
+});
+</script>
+</body>
+</html>
