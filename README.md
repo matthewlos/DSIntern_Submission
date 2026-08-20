@@ -24,6 +24,4 @@ Duplicated export row; demo traffic inflating the week; confidence written as te
 
 The Aug 4 prompt change reads **+6.8pp** as exported, **−0.2pp** once the demo row is struck, and **+1.0pp** after adjusting for the shift toward hand-started runs. That is uncertainty, not a win. Separately, Reply draft acceptance halved on Aug 7 while model confidence hit its weekly high. That mismatch is why confidence is never treated as a measure of quality here.
 
-## Next
 
-Separate demo from internal traffic in the export; document the Aug 7 policy change; re-run the automated-versus-manual split next week to test whether the prompt only helps on messy input.
